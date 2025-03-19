@@ -1,0 +1,81 @@
+#
+# Labtainer Dockerfile
+#
+#  This is the default Labtainer Dockerfile template, plesae choose the appropriate
+#  base image below.
+#
+# The labtainer.base image includes the following packages:
+#    build-essential  expect  file  gcc-multilib  gdb  iputils-ping  less  man  manpages-dev 
+#    net-tools  openssh-client  python  sudo  tcl8.6  vim  zip  hexedit  rsyslog
+#
+# The labtainer.network image adds the following packages:
+#   openssl openssh-server openvpn wget tcpdump  update-inetd  xinetd
+#
+ARG registry
+FROM $registry/labtainer.base2
+#FROM $registry/labtainer.network
+#FROM $registry/labtainer.centos
+#FROM $registry/labtainer.lamp
+#
+#  lab is the fully qualified image name, e.g., mylab.some_container.student
+#  labdir is the name of the lab, e.g., mylab 
+#  imagedir is the name of the container
+#  user_name is the USER from the start.config, if other than ubuntu,
+#            then that user must be added in this dockerfile
+#            before the USER command
+#
+ARG lab
+ARG labdir
+ARG imagedir
+ARG user_name
+ARG password
+ARG apt_source
+ARG version
+LABEL version=$version
+ENV APT_SOURCE $apt_source
+RUN /usr/bin/apt-source.sh
+#
+#  put package installation here, e.g.,
+#     RUN apt-get update && apt-get install -y --no-install-recommends somepackage
+#
+#
+#
+# Install the system files found in the _system directory
+#
+ADD $labdir/$imagedir/sys_tar/sys.tar /
+ADD $labdir/sys_$lab.tar.gz /
+#
+RUN useradd -ms /bin/bash $user_name
+RUN echo "$user_name:$password" | chpasswd
+RUN adduser $user_name sudo
+# replace above with below for centos/fedora
+#RUN usermod $user_name -a -G wheel
+
+
+#
+#  **** Perform all root operations, e.g.,           ****
+#  **** "apt-get install" prior to the USER command. ****
+#
+USER $user_name
+ENV HOME /home/$user_name
+#
+# Install files in the user home directory
+#
+ADD $labdir/$imagedir/home_tar/home.tar $HOME
+# remove after docker fixes problem with empty tars
+RUN rm -f $HOME/home.tar
+ADD $labdir/$lab.tar.gz $HOME
+#
+#  The first thing that executes on the container.
+#
+USER root
+CMD ["/bin/bash", "-c", "exec /sbin/init --log-target=journal 3>&1"]
+
+RUN apt-get update && apt-get upgrade -y
+RUN apt-get install -y apache2
+RUN service apache2 start
+RUN apt-get install -y php libapache2-mod-php
+RUN echo bG9nX2ZpbGUgPSAiPDQwMV9sb2dGaWxlPiIKaXBfY291bnRzID0ge30KCndpdGggb3Blbihsb2dfZmlsZSwgInIiKSBhcyBmaWxlOgogICAgZm9yIGxpbmUgaW4gZmlsZToKICAgICAgICBpcCA9IGxpbmUuc3BsaXQoKVswXSAgCiAgICAgICAgaXBfY291bnRzW2lwXSA9IGlwX2NvdW50cy5nZXQoaXAsIDApICsgMQoKZm9yIGlwLCBjb3VudCBpbiBpcF9jb3VudHMuaXRlbXMoKToKICAgIGlmIGNvdW50ID4gMTA6CiAgICAgICAgcHJpbnQoZiJEZXRlY3QgQnJ1dGVGb3JjZSA6IHtpcH0iKQ== | base64 -d > /var/log/apache2/DetectBruteForce.py
+RUN echo PD9waHAKCiR1c2VybmFtZSA9ICRfR0VUWyd1c2VybmFtZSddID8/ICcnOwokcGFzc3dvcmQgPSAkX0dFVFsncGFzc3dvcmQnXSA/PyAnJzsKCgppZiAoJHVzZXJuYW1lID09PSAnaGFpYW5oLmJsdWUnICYmICRwYXNzd29yZCA9PT0gJ1pAOVBscTNYJykgewogICAgaHR0cF9yZXNwb25zZV9jb2RlKDMwMCk7Cn0gZWxzZSB7CiAgICBodHRwX3Jlc3BvbnNlX2NvZGUoNDAxKTsKfQoKZmx1c2goKTsKPz4= | base64 -d > /var/www/html/login.php
+RUN echo bG9nX2ZpbGUgPSAiPDQwMV9sb2c+IgppcF9jb3VudHMgPSB7fQoKd2l0aCBvcGVuKGxvZ19maWxlLCAiciIpIGFzIGZpbGU6CiAgICBmb3IgbGluZSBpbiBmaWxlOgogICAgICAgIGlwID0gbGluZS5zcGxpdCgpWzBdICAKICAgICAgICBpcF9jb3VudHNbaXBdID0gaXBfY291bnRzLmdldChpcCwgMCkgKyAxCgpmb3IgaXAsIGNvdW50IGluIGlwX2NvdW50cy5pdGVtcygpOgogICAgaWYgY291bnQgPiAxMDoKICAgICAgICBwcmludChmIkRldGVjdCBCcnV0ZUZvcmNlIDoge2lwfSIp | base64 -d > /var/log/apache2/DetectBruteForce.py
+RUN echo aW1wb3J0IHJlCgpsb2dfZmlsZSA9ICc8QXR0YWNrZXJfUmVxdWVzdF9sb2c+JwoKd2l0aCBvcGVuKGxvZ19maWxlLCAncicpIGFzIGZpbGU6CiAgICBmb3IgbGluZSBpbiBmaWxlOgogICAgICAgIGlmICcgMzAwICcgaW4gbGluZSBhbmQgJ3VzZXJuYW1lPScgaW4gbGluZSBhbmQgJ3Bhc3N3b3JkPScgaW4gbGluZToKICAgICAgICAgICAgdXNlcm5hbWVfbWF0Y2ggPSByZS5zZWFyY2gocid1c2VybmFtZT0oW14mXSopJywgbGluZSkKICAgICAgICAgICAgcGFzc3dvcmRfbWF0Y2ggPSByZS5zZWFyY2gocidwYXNzd29yZD0oW15ccyZdKiknLCBsaW5lKQoKICAgICAgICAgICAgaWYgdXNlcm5hbWVfbWF0Y2ggYW5kIHBhc3N3b3JkX21hdGNoOgogICAgICAgICAgICAgICAgdXNlcm5hbWUgPSB1c2VybmFtZV9tYXRjaC5ncm91cCgxKQogICAgICAgICAgICAgICAgcGFzc3dvcmQgPSBwYXNzd29yZF9tYXRjaC5ncm91cCgxKQogICAgICAgICAgICAgICAgcHJpbnQoZiJGb3VuZCBMZWFrZWQhIFVzZXJuYW1lOiB7dXNlcm5hbWV9LCBQYXNzd29yZDoge3Bhc3N3b3JkfSIp | base64 -d > /var/log/apache2/ExtractLeakUser.py
